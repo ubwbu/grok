@@ -1,6 +1,52 @@
 package grok
 
-var patterns = map[string]string{
+import (
+	"fmt"
+	"regexp"
+)
+
+type GrokRegexp struct {
+	Pattern             string
+	DenormalizedPattern string
+	Re                  *regexp.Regexp
+}
+
+func (g *GrokRegexp) Run(content interface{}) (map[string]string, error) {
+	if g.Re == nil {
+		return nil, fmt.Errorf("not complied")
+	}
+	result := map[string]string{}
+
+	switch v := content.(type) {
+	case []byte:
+		match := g.Re.FindSubmatch(v)
+		if len(match) == 0 {
+			return nil, fmt.Errorf("no match")
+		}
+		for i, name := range g.Re.SubexpNames() {
+			result[name] = string(match[i])
+		}
+	case string:
+		match := g.Re.FindStringSubmatch(v)
+		if len(match) == 0 {
+			return nil, fmt.Errorf("no match")
+		}
+		for i, name := range g.Re.SubexpNames() {
+			result[name] = match[i]
+		}
+	}
+	return result, nil
+}
+
+func CopyDefalutPatterns() map[string]string {
+	ret := map[string]string{}
+	for k, v := range defalutPatterns {
+		ret[k] = v
+	}
+	return ret
+}
+
+var defalutPatterns = map[string]string{
 	"USERNAME":             `[a-zA-Z0-9._-]+`,
 	"USER":                 `%{USERNAME}`,
 	"EMAILLOCALPART":       `[a-zA-Z][a-zA-Z0-9_.+-=:]+`,

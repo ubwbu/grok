@@ -3,32 +3,24 @@ package main
 import (
 	"fmt"
 
-	"github.com/vjeantet/grok"
+	"github.com/ubwbu/grok"
 )
 
 func main() {
-	fmt.Println("# Default Capture :")
-	g, _ := grok.New()
-	values, _ := g.Parse("%{COMMONAPACHELOG}", `127.0.0.1 - - [23/Apr/2014:22:58:32 +0200] "GET /index.php HTTP/1.1" 404 207`)
-	for k, v := range values {
-		fmt.Printf("%+15s: %s\n", k, v)
+	de, err := grok.DenormalizePatternsFromMap(grok.CopyDefalutPatterns())
+	if err != nil {
+		fmt.Print(err)
+		return
 	}
-
-	fmt.Println("\n# Named Capture :")
-	g, _ = grok.NewWithConfig(&grok.Config{NamedCapturesOnly: true})
-	values, _ = g.Parse("%{COMMONAPACHELOG}", `127.0.0.1 - - [23/Apr/2014:22:58:32 +0200] "GET /index.php HTTP/1.1" 404 207`)
-	for k, v := range values {
-		fmt.Printf("%+15s: %s\n", k, v)
+	g, err := grok.CompilePattern("%{COMMONAPACHELOG}", de)
+	if err != nil {
+		fmt.Print(err)
 	}
-
-	fmt.Println("\n# Add custom patterns :")
-	// We add 3 patterns to our Grok instance, to structure an IRC message
-	g, _ = grok.NewWithConfig(&grok.Config{NamedCapturesOnly: true})
-	g.AddPattern("IRCUSER", `\A@(\w+)`)
-	g.AddPattern("IRCBODY", `.*`)
-	g.AddPattern("IRCMSG", `%{IRCUSER:user} .* : %{IRCBODY:message}`)
-	values, _ = g.Parse("%{IRCMSG}", `@vjeantet said : Hello !`)
-	for k, v := range values {
+	ret, err := g.Run(`127.0.0.1 - - [23/Apr/2014:22:58:32 +0200] "GET /index.php HTTP/1.1" 404 207`)
+	if err != nil {
+		fmt.Print(err)
+	}
+	for k, v := range ret {
 		fmt.Printf("%+15s: %s\n", k, v)
 	}
 }
