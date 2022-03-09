@@ -17,10 +17,10 @@ var (
 )
 
 type Grok struct {
-	GlobalCompliedPatterns map[string]string
+	GlobalDenormalizedPatterns map[string]string
 
-	CompliedPatterns map[string]string
-	CompliedGrokRe   map[string]*GrokRegexp
+	DenormalizedPatterns map[string]string
+	CompliedGrokRe       map[string]*GrokRegexp
 }
 
 func DenormalizePattern(pattern string, denormalized ...map[string]string) (string, error) {
