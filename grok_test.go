@@ -1,10 +1,12 @@
 package grok
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestDenormalizeGlobalPatterns(t *testing.T) {
-	if denormalized, err := DenormalizePatternsFromMap(defalutPatterns); err != nil {
-		t.Error(err)
+	if denormalized, errs := DenormalizePatternsFromMap(defalutPatterns); len(errs) != 0 {
+		t.Error(errs)
 	} else {
 		if len(defalutPatterns) != len(denormalized) {
 			t.Error("len(GlobalPatterns) != len(denormalized)")
@@ -27,9 +29,9 @@ func TestParse(t *testing.T) {
 		"INT": patternINT,
 	}
 
-	denormalized, err := DenormalizePatternsFromMap(defalutPatterns, patterns)
-	if err != nil {
-		t.Error(err)
+	denormalized, errs := DenormalizePatternsFromMap(defalutPatterns, patterns)
+	if len(errs) != 0 {
+		t.Error(errs)
 	}
 	g, err := CompilePattern("%{DAY:day}", denormalized)
 	if err != nil {
@@ -45,13 +47,13 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseFromPathPattern(t *testing.T) {
-	pathPatterns, err := DenormalizePatternsFromPath("./patterns")
+	pathPatterns, err := LoadPatternsFromPath("./patterns")
 	if err != nil {
 		t.Error(err)
 	}
-	de, err := DenormalizePatternsFromMap(pathPatterns)
-	if err != nil {
-		t.Error(err)
+	de, errs := DenormalizePatternsFromMap(pathPatterns)
+	if len(errs) != 0 {
+		t.Error(errs)
 	}
 	g, err := CompilePattern("%{DAY:day}", de)
 	if err != nil {
@@ -66,9 +68,24 @@ func TestParseFromPathPattern(t *testing.T) {
 	}
 }
 
-func TestDenormalizePatternsFromPathErr(t *testing.T) {
-	_, err := DenormalizePatternsFromPath("./Lorem ipsum Minim qui in.")
+func TestLoadPatternsFromPathErr(t *testing.T) {
+	_, err := LoadPatternsFromPath("./Lorem ipsum Minim qui in.")
 	if err == nil {
 		t.Fatalf("AddPatternsFromPath should returns an error when path is invalid")
+	}
+}
+
+func BenchmarkFromMap(b *testing.B) {
+	pathPatterns, err := LoadPatternsFromPath("./patterns")
+	if err != nil {
+		b.Error(err)
+	}
+
+	for n := 0; n < b.N; n++ {
+		de, errs := DenormalizePatternsFromMap(pathPatterns)
+		if len(errs) != 0 {
+			b.Error(err)
+			b.Error(de)
+		}
 	}
 }

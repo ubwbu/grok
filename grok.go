@@ -66,49 +66,7 @@ func DenormalizePattern(pattern string, denormalized ...map[string]string) (stri
 	return pattern, nil
 }
 
-func DenormalizePatternsFromMap(m map[string]string, denormalized ...map[string]string) (map[string]string, error) {
-	patternDeps := graph{}
-	de := []map[string]string{}
-	de = append(de, denormalized...)
-	result := map[string]string{}
-	de = append(de, result)
-	for k, v := range m {
-		keys := []string{}
-		for _, key := range normal.FindAllStringSubmatch(v, -1) {
-			names := strings.Split(key[1], ":")
-			syntax := names[0]
-			flag := false
-			for _, v := range de {
-				if _, ok := v[syntax]; ok {
-					flag = true
-					break
-				}
-			}
-			if !flag {
-				if _, ok := m[syntax]; ok {
-					flag = true
-				}
-			}
-			if !flag {
-				return nil, fmt.Errorf("no pattern found for %%{%s}", syntax)
-			}
-
-			keys = append(keys, syntax)
-		}
-		patternDeps[k] = keys
-	}
-	order, _ := sortGraph(patternDeps)
-	for _, key := range reverseList(order) {
-		if rst, err := DenormalizePattern(m[key], de...); err == nil {
-			result[key] = rst
-		} else {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
-func DenormalizePatternsFromPath(path string) (map[string]string, error) {
+func LoadPatternsFromPath(path string) (map[string]string, error) {
 	if fi, err := os.Stat(path); err == nil {
 		if fi.IsDir() {
 			path = path + "/*"
@@ -140,8 +98,43 @@ func DenormalizePatternsFromPath(path string) (map[string]string, error) {
 
 		_ = file.Close()
 	}
+	return filePatterns, nil
+}
 
-	return DenormalizePatternsFromMap(filePatterns, nil)
+// func DenormalizePatternsFromMap denormalize pattern from map,
+// will return a valid pattern:value map and an invalid pattern:error map.
+func DenormalizePatternsFromMap(m map[string]string, denormalized ...map[string]string) (map[string]string, map[string]string) {
+	patternDeps := map[string]*nodeP{}
+
+	for key, value := range m {
+		node := &nodeP{
+			cnt:   value,
+			cNode: []string{},
+		}
+
+		// sub pattern
+		for _, key := range normal.FindAllStringSubmatch(value, -1) {
+			names := strings.Split(key[1], ":")
+			syntax := names[0]
+
+			if _, ok := m[syntax]; ok {
+			} else { // 取 denormalized 的
+				for _, v := range denormalized {
+					if deV, ok := v[syntax]; ok {
+						node.cNode = append(node.cNode, syntax)
+						patternDeps[syntax] = &nodeP{
+							cnt: deV,
+						}
+						break
+					}
+				}
+			}
+			node.cNode = append(node.cNode, syntax)
+		}
+		patternDeps[key] = node
+	}
+
+	return runTree(patternDeps)
 }
 
 func CompilePattern(pattern string, denormalized ...map[string]string) (*GrokRegexp, error) {
