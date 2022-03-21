@@ -42,9 +42,9 @@ import (
 )
 
 func main() {
-  de, err := grok.DenormalizePatternsFromMap(grok.CopyDefalutPatterns())
-  if err != nil {
-    fmt.Print(err)
+  de, errs := grok.DenormalizePatternsFromMap(grok.CopyDefalutPatterns())
+  if len(errs) != 0 {
+    fmt.Print(errs)
     return
   }
   g, err := grok.CompilePattern("%{COMMONAPACHELOG}", de)
