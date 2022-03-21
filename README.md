@@ -21,8 +21,8 @@ import "github.com/ubwbu/grok"
 ### Denormalize and Compile
 
 ```go
-denormalized, err := DenormalizePatternsFromMap(CopyDefalutPatterns())
-if err == nil {
+denormalized, errs := DenormalizePatternsFromMap(CopyDefalutPatterns())
+if len(errs) == 0 {
   g, err := CompilePattern("%{DAY:day}", denormalized)
   if err == nil {
     ret, _ := g.Run("Tue qds")
